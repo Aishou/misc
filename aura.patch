@@ -1,0 +1,117 @@
+commit 3388c6bc9b0e5cba4914c6c81c2b3533bdff28ed
+Author: Aishou <kaito.linux@gmail.com>
+Date:   Tue Feb 17 14:56:03 2015 +0100
+
+    Hack to get Aura Kindom at least start..
+
+diff --git a/dlls/kernel32/kernel32.spec b/dlls/kernel32/kernel32.spec
+index c95c446..cfab419 100644
+--- a/dlls/kernel32/kernel32.spec
++++ b/dlls/kernel32/kernel32.spec
+@@ -154,7 +154,7 @@
+ @ stdcall AllocConsole()
+ @ stub -i386 AllocLSCallback
+ @ stdcall -i386 -private AllocSLCallback(ptr ptr) krnl386.exe16.AllocSLCallback
+-@ stub AllocateUserPhysicalPages
++@ stdcall AllocateUserPhysicalPages(ptr ptr long ptr long long ptr)
+ @ stdcall ApplicationRecoveryFinished(long)
+ @ stdcall ApplicationRecoveryInProgress(ptr)
+ @ stdcall AreFileApisANSI()
+@@ -535,7 +535,7 @@
+ @ stdcall FreeLibraryAndExitThread(long long)
+ @ stdcall FreeResource(long)
+ @ stdcall -i386 -private FreeSLCallback(long) krnl386.exe16.FreeSLCallback
+-@ stub FreeUserPhysicalPages
++@ stdcall FreeUserPhysicalPages(ptr ptr long ptr long long ptr)
+ @ stub FreeVirtualBuffer
+ @ stdcall GenerateConsoleCtrlEvent(long long)
+ @ stdcall -i386 -private Get16DLLAddress(long str) krnl386.exe16.Get16DLLAddress
+diff --git a/dlls/kernel32/virtual.c b/dlls/kernel32/virtual.c
+index 2df19a7..bb146dd 100644
+--- a/dlls/kernel32/virtual.c
++++ b/dlls/kernel32/virtual.c
+@@ -617,6 +617,59 @@ UINT WINAPI GetWriteWatch( DWORD flags, LPVOID base, SIZE_T size, LPVOID *addres
+ }
+ 
+ 
++/*
++
++ * @implemented
++
++ */
++BOOL WINAPI AllocateUserPhysicalPages(IN HANDLE hProcess,  IN PULONG_PTR NumberOfPages,
++                          OUT PULONG_PTR UserPfnArray)
++{
++/*
++   NTSTATUS Status;
++
++ 
++
++   Status = NtAllocateUserPhysicalPages(hProcess, NumberOfPages, UserPfnArray);
++
++   if (!NT_SUCCESS(Status))
++
++   {
++
++       BaseSetLastNTError(Status);
++
++       return FALSE;
++
++   }
++*/
++   return TRUE;
++
++}
++
++ /*
++ * @implemented
++ */
++ 
++BOOL WINAPI FreeUserPhysicalPages(IN HANDLE hProcess,IN PULONG_PTR NumberOfPages,
++                      IN PULONG_PTR PageArray)
++{
++  /*
++    NTSTATUS Status;
++
++    Status = NtFreeUserPhysicalPages(hProcess, NumberOfPages, PageArray);
++    if (!NT_SUCCESS(Status))
++    {
++        BaseSetLastNTError(Status);
++        return FALSE;
++    }
++
++    */
++    return TRUE;
++    
++}
++
++
++
+ /***********************************************************************
+  *             ResetWriteWatch   (KERNEL32.@)
+  */
+diff --git a/dlls/user32/dialog.c b/dlls/user32/dialog.c
+index 3b48fbb..4503a77 100644
+--- a/dlls/user32/dialog.c
++++ b/dlls/user32/dialog.c
+@@ -714,6 +714,7 @@ static HWND DIALOG_CreateIndirect( HINSTANCE hInst, LPCVOID dlgTemplate,
+         if (template.style & WS_VISIBLE && !(GetWindowLongW( hwnd, GWL_STYLE ) & WS_VISIBLE))
+         {
+            ShowWindow( hwnd, SW_SHOWNORMAL );   /* SW_SHOW doesn't always work */
++	   UpdateWindow( hwnd );
+         }
+         return hwnd;
+     }
+diff --git a/include/winbase.h b/include/winbase.h
+index 1eb49b3..ab09a3c 100644
+--- a/include/winbase.h
++++ b/include/winbase.h
+@@ -2456,6 +2456,8 @@ WINBASEAPI LPVOID      WINAPI VirtualAllocEx(HANDLE,LPVOID,SIZE_T,DWORD,DWORD);
+ WINBASEAPI BOOL        WINAPI VirtualFree(LPVOID,SIZE_T,DWORD);
+ WINBASEAPI BOOL        WINAPI VirtualFreeEx(HANDLE,LPVOID,SIZE_T,DWORD);
+ WINBASEAPI BOOL        WINAPI VirtualLock(LPVOID,SIZE_T);
++WINBASEAPI BOOL        WINAPI AllocateUserPhysicalPages(IN HANDLE hProcess,  IN PULONG_PTR NumberOfPages, OUT PULONG_PTR UserPfnArray);
++WINBASEAPI BOOL        WINAPI FreeUserPhysicalPages(IN HANDLE hProcess, IN PULONG_PTR NumberOfPages, IN PULONG_PTR PageArray);
+ WINBASEAPI BOOL        WINAPI VirtualProtect(LPVOID,SIZE_T,DWORD,LPDWORD);
+ WINBASEAPI BOOL        WINAPI VirtualProtectEx(HANDLE,LPVOID,SIZE_T,DWORD,LPDWORD);
+ WINBASEAPI SIZE_T      WINAPI VirtualQuery(LPCVOID,PMEMORY_BASIC_INFORMATION,SIZE_T);
